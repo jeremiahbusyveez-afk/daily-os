@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily OS — Miah's Command Center</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #181c23;
+    --border: #1f2430;
+    --accent: #6ee7b7;
+    --accent2: #818cf8;
+    --accent3: #f472b6;
+    --warn: #fbbf24;
+    --danger: #f87171;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --dim: #334155;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Space Grotesk', sans-serif;
+  }
+
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; overflow-x: hidden; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 28px; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: rgba(10,12,16,0.92);
+    backdrop-filter: blur(12px); z-index: 100;
+  }
+
+  .logo { font-family: var(--mono); font-size: 13px; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; }
+  .logo span { color: var(--muted); }
+
+  .header-right { display: flex; align-items: center; gap: 10px; }
+
+  .today-badge { font-family: var(--mono); font-size: 11px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: 999px; letter-spacing: 0.05em; }
+
+  .save-indicator { font-family: var(--mono); font-size: 10px; color: var(--accent); opacity: 0; transition: opacity 0.4s; }
+  .save-indicator.show { opacity: 1; }
+
+  .tabs { display: flex; gap: 4px; padding: 16px 28px 0; border-bottom: 1px solid var(--border); overflow-x: auto; }
+
+  .tab-btn { background: none; border: none; color: var(--muted); font-family: var(--sans); font-size: 13px; font-weight: 500; padding: 10px 18px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.2s, border-color 0.2s; white-space: nowrap; letter-spacing: 0.02em; }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-btn.sleep.active { color: var(--accent2); border-bottom-color: var(--accent2); }
+  .tab-btn.meal.active  { color: var(--accent3); border-bottom-color: var(--accent3); }
+
+  .main { padding: 28px; max-width: 1100px; margin: 0 auto; }
+  .section { display: none; }
+  .section.active { display: block; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+  @media (max-width: 700px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .main { padding: 16px; } .tabs { padding: 12px 16px 0; } header { padding: 14px 16px; }
+  }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+  .card-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 16px; }
+
+  .stat-tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
+  .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 8px; }
+  .stat-value { font-family: var(--mono); font-size: 28px; font-weight: 700; line-height: 1; color: var(--accent); }
+  .stat-value.purple { color: var(--accent2); }
+  .stat-value.pink   { color: var(--accent3); }
+  .stat-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  input[type="text"], input[type="time"], input[type="number"], select, textarea {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text); font-family: var(--sans); font-size: 13px; padding: 9px 12px; width: 100%; outline: none; transition: border-color 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 70px; }
+  select option { background: var(--surface2); }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: var(--radius-sm); font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.15s, transform 0.1s; letter-spacing: 0.02em; }
+  .btn:active { transform: scale(0.97); }
+  .btn:hover  { opacity: 0.88; }
+  .btn-green  { background: var(--accent);  color: #0a0c10; }
+  .btn-purple { background: var(--accent2); color: #0a0c10; }
+  .btn-pink   { background: var(--accent3); color: #0a0c10; }
+  .btn-ghost  { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+  .habit-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .habit-row:last-child { border-bottom: none; }
+  .habit-name { flex: 1; font-size: 14px; font-weight: 500; }
+  .habit-goal { font-size: 11px; color: var(--muted); }
+
+  .check-btn { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--dim); background: none; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; color: transparent; }
+  .check-btn.done { background: var(--accent); border-color: var(--accent); color: #0a0c10; }
+  .check-btn.miss { background: var(--danger); border-color: var(--danger); color: white; }
+
+  .progress-bar-wrap { background: var(--border); border-radius: 999px; height: 6px; overflow: hidden; margin-top: 8px; }
+  .progress-bar-fill { height: 100%; border-radius: 999px; background: var(--accent); transition: width 0.5s ease; }
+  .progress-bar-fill.purple { background: var(--accent2); }
+
+  .streak-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .streak-dot { width: 28px; height: 28px; border-radius: 6px; background: var(--border); display: flex; align-items: center; justify-content: center; font-size: 10px; font-family: var(--mono); color: var(--muted); }
+  .streak-dot.hit  { background: rgba(110,231,183,0.15); border: 1px solid var(--accent); color: var(--accent); }
+  .streak-dot.miss { background: rgba(248,113,113,0.1);  border: 1px solid var(--danger); color: var(--danger); }
+
+  .sleep-gauge { position: relative; width: 140px; height: 140px; margin: 0 auto 16px; }
+  .sleep-gauge svg { transform: rotate(-90deg); }
+  .sleep-center-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: var(--mono); }
+  .sleep-hours-big { font-size: 26px; font-weight: 700; color: var(--accent2); line-height: 1; }
+  .sleep-label-small { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  .sleep-log-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; gap: 8px; flex-wrap: wrap; }
+  .sleep-log-row:last-child { border-bottom: none; }
+  .sleep-date { color: var(--muted); font-family: var(--mono); font-size: 11px; }
+  .sleep-badge { font-family: var(--mono); font-size: 11px; padding: 3px 10px; border-radius: 999px; font-weight: 700; }
+  .sleep-badge.hit  { background: rgba(110,231,183,0.12); color: var(--accent); border: 1px solid rgba(110,231,183,0.3); }
+  .sleep-badge.miss { background: rgba(248,113,113,0.12); color: var(--danger); border: 1px solid rgba(248,113,113,0.3); }
+  .sleep-badge.warn { background: rgba(251,191,36,0.12);  color: var(--warn);   border: 1px solid rgba(251,191,36,0.3); }
+
+  .ingredient-row { display: grid; grid-template-columns: 1fr 80px 80px auto; gap: 8px; align-items: start; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .ingredient-row:last-child { border-bottom: none; }
+
+  .remove-btn { width: 30px; height: 30px; background: none; border: 1px solid var(--dim); border-radius: var(--radius-sm); color: var(--muted); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
+  .remove-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+  .grocery-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; background: var(--surface2); border-radius: var(--radius-sm); margin-bottom: 6px; font-size: 13px; }
+  .grocery-qty { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+  .section-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+  .section-title { font-size: 20px; font-weight: 700; color: var(--text); }
+  .section-title span { color: var(--accent); }
+  .section-title.purple span { color: var(--accent2); }
+  .section-title.pink   span { color: var(--accent3); }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  .empty { text-align: center; padding: 30px; color: var(--muted); font-size: 13px; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 420px; }
+  .modal-title { font-size: 15px; font-weight: 700; margin-bottom: 16px; }
+  .form-row { margin-bottom: 14px; }
+  .form-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 6px; display: block; }
+  .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+
+  .week-chart { display: flex; align-items: flex-end; gap: 8px; height: 80px; padding-top: 8px; }
+  .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+  .bar { width: 100%; border-radius: 4px 4px 0 0; opacity: 0.7; transition: opacity 0.2s; min-height: 4px; }
+  .bar:hover { opacity: 1; }
+  .bar-day { font-size: 9px; font-family: var(--mono); color: var(--muted); }
+
+
+  /* ── PIN SCREEN ── */
+  #pinScreen {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 999; gap: 32px;
+  }
+  #pinScreen.hidden { display: none; }
+  .pin-logo { font-family: var(--mono); font-size: 14px; color: var(--accent); letter-spacing: 0.15em; text-transform: uppercase; }
+  .pin-logo span { color: var(--muted); }
+  .pin-title { font-size: 15px; font-weight: 600; color: var(--muted); letter-spacing: 0.05em; text-align: center; }
+  .pin-dots { display: flex; gap: 14px; justify-content: center; }
+  .pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--dim); background: transparent; transition: all 0.15s; }
+  .pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+  .pin-dot.error  { background: var(--danger); border-color: var(--danger); }
+  .pin-pad { display: grid; grid-template-columns: repeat(3, 72px); gap: 12px; }
+  .pin-key { width: 72px; height: 72px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 20px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s, transform 0.1s; }
+  .pin-key:hover  { background: var(--surface2); }
+  .pin-key:active { transform: scale(0.92); background: var(--dim); }
+  .pin-key.del    { font-size: 18px; color: var(--muted); }
+  .pin-error-msg  { font-size: 12px; color: var(--danger); font-family: var(--mono); min-height: 18px; text-align: center; }
+
+  /* ── USER PICKER ── */
+  #userScreen {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 998; gap: 28px;
+  }
+  #userScreen.hidden { display: none; }
+  .user-title { font-size: 15px; font-weight: 600; color: var(--muted); letter-spacing: 0.05em; }
+  .user-cards { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+  .user-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 28px 36px; cursor: pointer; text-align: center;
+    transition: border-color 0.2s, transform 0.15s;
+    min-width: 140px;
+  }
+  .user-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .user-avatar { font-size: 36px; margin-bottom: 10px; }
+  .user-name { font-size: 15px; font-weight: 700; color: var(--text); }
+  .user-sub  { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .active-user-badge {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 4px 12px; border-radius: 999px; cursor: pointer;
+  }
+  .active-user-badge:hover { border-color: var(--accent); color: var(--accent); }
+
+  .glow-purple { box-shadow: 0 0 0 1px var(--accent2), 0 0 12px rgba(129,140,248,0.2); }
+
+  /* ── MEAL PLAN CALENDAR ── */
+  .week-plan-grid {
+    display: grid;
+    grid-template-columns: 90px repeat(7, 1fr);
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .week-plan-header {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    padding: 6px 4px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+
+  .week-plan-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent3);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    display: flex;
+    align-items: center;
+    padding-right: 8px;
+  }
+
+  .meal-slot {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    min-height: 52px;
+    padding: 6px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    position: relative;
+  }
+
+  .meal-slot:hover { border-color: var(--accent3); }
+
+  .meal-slot.filled {
+    background: rgba(244,114,182,0.08);
+    border-color: rgba(244,114,182,0.3);
+  }
+
+  .meal-slot-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent3);
+    line-height: 1.3;
+    margin-bottom: 3px;
+  }
+
+  .meal-slot-clear {
+    position: absolute;
+    top: 4px; right: 4px;
+    width: 16px; height: 16px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 1;
+    display: none;
+  }
+
+  .meal-slot.filled .meal-slot-clear { display: block; }
+  .meal-slot-clear:hover { color: var(--danger); }
+
+  .meal-slot-add {
+    font-size: 10px;
+    color: var(--dim);
+    text-align: center;
+    padding-top: 8px;
+  }
+
+  /* meal assign modal */
+  .meal-assign-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+
+  .meal-option-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 10px 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .meal-option-btn:hover {
+    border-color: var(--accent3);
+    background: rgba(244,114,182,0.08);
+    color: var(--accent3);
+  }
+
+  /* storage status banner */
+  #storageBanner {
+    background: rgba(110,231,183,0.08); border: 1px solid rgba(110,231,183,0.2);
+    border-radius: var(--radius-sm); padding: 8px 14px; margin-bottom: 20px;
+    font-size: 12px; color: var(--accent); font-family: var(--mono);
+    display: flex; align-items: center; gap: 8px;
+  }
+  #storageBanner.error { background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.2); color: var(--danger); }
+</style>
+</head>
+<body>
+
+<div id="pinScreen">
+  <div class="pin-logo">Daily <span>//</span> OS</div>
+  <div class="pin-title">Enter your PIN</div>
+  <div class="pin-dots" id="pinDots">
+    <div class="pin-dot" id="pd0"></div>
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+    <div class="pin-dot" id="pd4"></div>
+    <div class="pin-dot" id="pd5"></div>
+  </div>
+  <div class="pin-pad">
+    <button class="pin-key" onclick="pinPress('1')">1</button>
+    <button class="pin-key" onclick="pinPress('2')">2</button>
+    <button class="pin-key" onclick="pinPress('3')">3</button>
+    <button class="pin-key" onclick="pinPress('4')">4</button>
+    <button class="pin-key" onclick="pinPress('5')">5</button>
+    <button class="pin-key" onclick="pinPress('6')">6</button>
+    <button class="pin-key" onclick="pinPress('7')">7</button>
+    <button class="pin-key" onclick="pinPress('8')">8</button>
+    <button class="pin-key" onclick="pinPress('9')">9</button>
+    <button class="pin-key del" onclick="pinPress('del')">&#9003;</button>
+    <button class="pin-key" onclick="pinPress('0')">0</button>
+    <div></div>
+  </div>
+  <div class="pin-error-msg" id="pinError"></div>
+</div>
+
+<div id="userScreen" class="hidden">
+  <div class="pin-logo">Daily <span>//</span> OS</div>
+  <div class="user-title">Who is logging in?</div>
+  <div class="user-cards">
+    <div class="user-card" onclick="selectUser('miah')">
+      <div class="user-avatar">👨</div>
+      <div class="user-name">Miah</div>
+      <div class="user-sub">Jeremiah</div>
+    </div>
+    <div class="user-card" onclick="selectUser('carfel')">
+      <div class="user-avatar">👩</div>
+      <div class="user-name">Carfel</div>
+      <div class="user-sub">My wife</div>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="logo">Daily <span>//</span> OS</div>
+  <div class="header-right">
+    <div class="save-indicator" id="saveIndicator">Saved</div>
+    <div class="active-user-badge" id="activeUserBadge" onclick="switchUser()" style="display:none"></div>
+    <div class="today-badge" id="todayBadge"></div>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('habits', this)">Habits</button>
+  <button class="tab-btn sleep" onclick="switchTab('sleep', this)">Sleep</button>
+  <button class="tab-btn meal" onclick="switchTab('meal', this)">Meal Planner</button>
+</div>
+
+<div class="main">
+
+  <!-- HABITS -->
+  <div class="section active" id="tab-habits">
+    <div id="storageBanner">Loading your data...</div>
+    <div class="section-hdr">
+      <div class="section-title">Today's <span>Habits</span></div>
+      <button class="btn btn-green btn-sm" onclick="openHabitModal()">+ Add Habit</button>
+    </div>
+
+    <div class="grid-3" style="margin-bottom:20px">
+      <div class="stat-tile"><div class="stat-label">Done Today</div><div class="stat-value" id="statDoneToday">0/0</div><div class="stat-sub">habits completed</div></div>
+      <div class="stat-tile"><div class="stat-label">Completion Rate</div><div class="stat-value" id="statRate">—</div><div class="stat-sub">this week</div></div>
+      <div class="stat-tile"><div class="stat-label">Longest Streak</div><div class="stat-value" id="statStreak">—</div><div class="stat-sub">days in a row</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card"><div class="card-title">Mark Today</div><div id="habitList"><div class="empty">Loading...</div></div></div>
+      <div class="card"><div class="card-title">7-Day Progress</div><div id="habitWeekView"><div class="empty">Loading...</div></div></div>
+    </div>
+  </div>
+
+  <!-- SLEEP -->
+  <div class="section" id="tab-sleep">
+    <div class="section-hdr">
+      <div class="section-title purple">Sleep <span>Log</span></div>
+      <button class="btn btn-purple btn-sm" onclick="openSleepModal()">+ Log Sleep</button>
+    </div>
+
+    <div class="grid-3" style="margin-bottom:20px">
+      <div class="stat-tile"><div class="stat-label">Avg Sleep</div><div class="stat-value purple" id="sleepAvg">—</div><div class="stat-sub">hours this week</div></div>
+      <div class="stat-tile"><div class="stat-label">Goal Hit Rate</div><div class="stat-value purple" id="sleepGoalRate">—</div><div class="stat-sub">7 to 8 hrs achieved</div></div>
+      <div class="stat-tile"><div class="stat-label">Goal</div><div class="stat-value purple">9 PM</div><div class="stat-sub">sleep · 4 AM wake</div></div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:20px">
+      <div class="card glow-purple">
+        <div class="card-title">Last Night</div>
+        <div class="sleep-gauge">
+          <svg width="140" height="140" viewBox="0 0 140 140">
+            <circle cx="70" cy="70" r="56" fill="none" stroke="#1f2430" stroke-width="10"/>
+            <circle cx="70" cy="70" r="56" fill="none" stroke="#818cf8" stroke-width="10"
+              stroke-dasharray="351.86" id="sleepGaugeFill" stroke-dashoffset="351.86" stroke-linecap="round"/>
+          </svg>
+          <div class="sleep-center-text">
+            <div class="sleep-hours-big" id="lastSleepHrs">—</div>
+            <div class="sleep-label-small">hours</div>
+          </div>
+        </div>
+        <div style="text-align:center;font-size:12px;color:var(--muted)" id="lastSleepNote">Log your sleep to see this.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">This Week</div>
+        <div class="week-chart" id="sleepChart"><div class="empty" style="margin:auto">No data yet.</div></div>
+        <div style="display:flex;gap:12px;margin-top:12px;font-size:11px">
+          <span style="color:var(--accent)">■ Goal hit</span>
+          <span style="color:var(--warn)">■ Close</span>
+          <span style="color:var(--danger)">■ Missed</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card"><div class="card-title">Sleep History</div><div id="sleepLogList"><div class="empty">No entries yet.</div></div></div>
+  </div>
+
+  <!-- MEAL -->
+  <div class="section" id="tab-meal">
+    <div class="section-hdr">
+      <div class="section-title pink">Meal <span>Planner</span></div>
+    </div>
+
+    <!-- WEEKLY PLAN -->
+    <div class="card" style="margin-bottom:20px;overflow-x:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+        <div class="card-title" style="margin:0">Weekly Meal Plan</div>
+        <div style="font-size:11px;color:var(--muted)">Tap a slot to assign a meal. Grocery list auto-updates.</div>
+      </div>
+      <div class="week-plan-grid" id="weekPlanGrid">
+        <!-- rendered by JS -->
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-title">Build a Meal</div>
+          <div class="form-row">
+            <label class="form-label">Meal Name</label>
+            <div style="display:flex;gap:8px">
+              <select id="mealSelect" style="flex:1" onchange="onMealSelect()">
+                <option value="">— Select existing meal —</option>
+              </select>
+              <button class="btn btn-ghost btn-sm" onclick="promptNewMeal()">New</button>
+            </div>
+          </div>
+          <div class="form-row" id="newMealNameRow" style="display:none">
+            <label class="form-label">New Meal Name</label>
+            <input type="text" id="newMealName" placeholder="e.g. Breakfast Bowl">
+          </div>
+          <hr class="divider" style="margin:10px 0">
+          <div class="card-title">Ingredients</div>
+          <div style="display:grid;grid-template-columns:1fr 80px 80px auto;gap:8px;margin-bottom:6px">
+            <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Name</span>
+            <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Qty</span>
+            <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Unit</span>
+            <span></span>
+          </div>
+          <div id="ingredientRows"></div>
+          <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="addIngredientRow()">+ Add Ingredient</button>
+          <div class="form-row" style="margin-top:14px">
+            <label class="form-label">Description / Notes</label>
+            <textarea id="mealDesc" placeholder="Cooking instructions, tips, substitutions..."></textarea>
+          </div>
+          <button class="btn btn-pink" style="width:100%;margin-top:6px;justify-content:center" onclick="saveMeal()">Save Meal</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="card" style="margin-bottom:20px"><div class="card-title">Saved Meals</div><div id="savedMealsList"><div class="empty">No meals saved yet.</div></div></div>
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div class="card-title" style="margin:0">Grocery List</div>
+            <button class="btn btn-ghost btn-sm" onclick="clearGrocery()">Clear All</button>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Auto-generated from your weekly meal plan.</div>
+          <div id="groceryList"><div class="empty">Assign meals to your weekly plan to build the grocery list.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HABIT MODAL -->
+<div class="modal-overlay" id="habitModal">
+  <div class="modal">
+    <div class="modal-title">Add New Habit</div>
+    <div class="form-row"><label class="form-label">Habit Name</label><input type="text" id="hName" placeholder="e.g. Morning walk"></div>
+    <div class="form-row"><label class="form-label">Goal / Description</label><input type="text" id="hGoal" placeholder="e.g. 30 minutes every day"></div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeHabitModal()">Cancel</button>
+      <button class="btn btn-green" onclick="saveHabit()">Add Habit</button>
+    </div>
+  </div>
+</div>
+
+<!-- SLEEP MODAL -->
+<div class="modal-overlay" id="sleepModal">
+  <div class="modal">
+    <div class="modal-title">Log Sleep</div>
+    <div class="form-row"><label class="form-label">Date</label><input type="text" id="sDate" placeholder="YYYY-MM-DD"></div>
+    <div class="form-row"><label class="form-label">Sleep Time</label><input type="time" id="sSleep" value="21:00"></div>
+    <div class="form-row"><label class="form-label">Wake Time</label><input type="time" id="sWake" value="04:00"></div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeSleepModal()">Cancel</button>
+      <button class="btn btn-purple" onclick="saveSleep()">Save Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- MEAL ASSIGN MODAL -->
+<div class="modal-overlay" id="assignModal">
+  <div class="modal">
+    <div class="modal-title" id="assignModalTitle">Choose a Meal</div>
+    <div class="meal-assign-grid" id="mealAssignGrid"></div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeAssignModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const SB_URL = 'https://anrolvzjalwlteurmrpf.supabase.co';
+const SB_KEY = 'sb_publishable_ZxYI0BkaACUOJM-g-RcmiA_EGQ9_wJ3';
+
+// ── USER MANAGEMENT ──
+let activeUser = null; // 'miah' or 'carfel'
+
+const USERS = {
+  miah:   { name: 'Miah',   emoji: '👨', sbRow: 'miah_data',   localKey: 'dailyOS_miah' },
+  carfel: { name: 'Carfel', emoji: '👩', sbRow: 'carfel_data', localKey: 'dailyOS_carfel' }
+};
+
+function selectUser(userId) {
+  activeUser = userId;
+  sessionStorage.setItem('dailyOS_user', userId);
+  document.getElementById('userScreen').classList.add('hidden');
+  const u = USERS[userId];
+  const badge = document.getElementById('activeUserBadge');
+  badge.textContent = u.emoji + ' ' + u.name;
+  badge.style.display = 'inline-flex';
+  loadFromStorage();
+}
+
+function switchUser() {
+  if (!confirm('Switch user? Your data is saved.')) return;
+  activeUser = null;
+  sessionStorage.removeItem('dailyOS_user');
+  sessionStorage.removeItem('dailyOS_unlocked');
+  location.reload();
+}
+
+let state = { habits: [], habitLogs: {}, sleepLogs: [], meals: [], grocery: [], weekPlan: {} };
+
+function getUser() { return USERS[activeUser]; }
+
+// ── SUPABASE SYNC ──
+async function loadFromStorage() {
+  const banner = document.getElementById('storageBanner');
+  const u = getUser();
+  try {
+    const res = await fetch(
+      `${SB_URL}/rest/v1/daily_os?id=eq.${u.sbRow}&select=data`,
+      { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
+    );
+    const rows = await res.json();
+    if (rows && rows.length && rows[0].data) {
+      state = rows[0].data;
+      if (!state.weekPlan) state.weekPlan = {};
+    } else {
+      state = { habits: [], habitLogs: {}, sleepLogs: [], meals: [], grocery: [], weekPlan: {} };
+    }
+    banner.textContent = u.emoji + ' ' + u.name + ' — synced across all devices.';
+    banner.classList.remove('error');
+    setTimeout(() => banner.style.display = 'none', 3000);
+  } catch(e) {
+    try {
+      const local = localStorage.getItem(u.localKey);
+      if (local) { state = JSON.parse(local); if (!state.weekPlan) state.weekPlan = {}; }
+      else state = { habits: [], habitLogs: {}, sleepLogs: [], meals: [], grocery: [], weekPlan: {} };
+    } catch(e2) {}
+    banner.textContent = 'Offline — using local backup. Will sync when back online.';
+    banner.classList.add('error');
+  }
+  render();
+}
+
+async function persist() {
+  const u = getUser();
+  if (!u) return;
+  try { localStorage.setItem(u.localKey, JSON.stringify(state)); } catch(e) {}
+  try {
+    await fetch(`${SB_URL}/rest/v1/daily_os`, {
+      method: 'POST',
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': 'Bearer ' + SB_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ id: u.sbRow, data: state, updated_at: new Date().toISOString() })
+    });
+    flashSaved();
+  } catch(e) {
+    flashSaved();
+  }
+}
+
+function flashSaved() {
+  const el = document.getElementById('saveIndicator');
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 1500);
+}
+
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+
+// ── TABS ──
+function switchTab(tab, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  btn.classList.add('active');
+  render();
+}
+
+function render() { renderHabits(); renderSleep(); renderMeals(); }
+
+// ── HABITS ──
+function openHabitModal()  { document.getElementById('habitModal').classList.add('open'); document.getElementById('hName').focus(); }
+function closeHabitModal() { document.getElementById('habitModal').classList.remove('open'); }
+
+function saveHabit() {
+  const name = document.getElementById('hName').value.trim();
+  const goal = document.getElementById('hGoal').value.trim();
+  if (!name) return;
+  state.habits.push({ id: Date.now().toString(), name, goal });
+  document.getElementById('hName').value = '';
+  document.getElementById('hGoal').value = '';
+  persist(); closeHabitModal(); renderHabits();
+}
+
+function markHabit(id, result) {
+  const today = todayStr();
+  if (!state.habitLogs[today]) state.habitLogs[today] = {};
+  state.habitLogs[today][id] = state.habitLogs[today][id] === result ? null : result;
+  persist(); renderHabits();
+}
+
+function deleteHabit(id) {
+  if (!confirm('Remove this habit?')) return;
+  state.habits = state.habits.filter(h => h.id !== id);
+  persist(); renderHabits();
+}
+
+function getLast7Days() {
+  const days = [];
+  for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d.toISOString().split('T')[0]); }
+  return days;
+}
+
+function renderHabits() {
+  const today = todayStr();
+  const log = state.habitLogs[today] || {};
+
+  if (!state.habits.length) {
+    document.getElementById('habitList').innerHTML = '<div class="empty">No habits yet. Add your first habit above.</div>';
+    document.getElementById('statDoneToday').textContent = '0/0';
+    document.getElementById('statRate').textContent = '—';
+    document.getElementById('statStreak').textContent = '—';
+    document.getElementById('habitWeekView').innerHTML = '<div class="empty">Add habits to see progress.</div>';
+    return;
+  }
+
+  const done = state.habits.filter(h => log[h.id] === 'done').length;
+  document.getElementById('statDoneToday').textContent = done + '/' + state.habits.length;
+
+  const last7 = getLast7Days();
+  let total = 0, hits = 0;
+  last7.forEach(d => {
+    const dl = state.habitLogs[d] || {};
+    state.habits.forEach(h => { if (dl[h.id]) { total++; if (dl[h.id] === 'done') hits++; } });
+  });
+  document.getElementById('statRate').textContent = total ? Math.round(hits/total*100) + '%' : '—';
+
+  let longest = 0, cur = 0;
+  Object.keys(state.habitLogs).sort().forEach(d => {
+    const anyDone = state.habits.some(h => (state.habitLogs[d] || {})[h.id] === 'done');
+    if (anyDone) { cur++; longest = Math.max(longest, cur); } else { cur = 0; }
+  });
+  document.getElementById('statStreak').textContent = longest || '—';
+
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  const yLog = state.habitLogs[yesterdayStr] || {};
+
+  document.getElementById('habitList').innerHTML = state.habits.map(h => {
+    const s = log[h.id];
+    const y = yLog[h.id];
+    const yBadge = y === 'done'
+      ? `<span style="font-size:10px;color:var(--accent);font-family:var(--mono);margin-left:6px" title="Done yesterday">✓ yday</span>`
+      : y === 'miss'
+      ? `<span style="font-size:10px;color:var(--danger);font-family:var(--mono);margin-left:6px" title="Missed yesterday">✗ yday</span>`
+      : '';
+    return `<div class="habit-row">
+      <div style="flex:1">
+        <div class="habit-name" style="display:flex;align-items:center;gap:4px">${h.name}${yBadge}</div>
+        <div class="habit-goal">${h.goal || 'No goal set'}</div>
+      </div>
+      <button class="check-btn ${s === 'done' ? 'done' : ''}" onclick="markHabit('${h.id}','done')" title="Done today">✓</button>
+      <button class="check-btn ${s === 'miss' ? 'miss' : ''}" onclick="markHabit('${h.id}','miss')" title="Missed today">✗</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteHabit('${h.id}')">Remove</button>
+    </div>`;
+  }).join('');
+
+  document.getElementById('habitWeekView').innerHTML = state.habits.map(h => {
+    const pct = last7.filter(d => (state.habitLogs[d] || {})[h.id] === 'done').length / 7 * 100;
+    const dots = last7.map(d => {
+      const s = (state.habitLogs[d] || {})[h.id];
+      const cls = s === 'done' ? 'hit' : s === 'miss' ? 'miss' : '';
+      return `<div class="streak-dot ${cls}">${DAYS[new Date(d+'T12:00').getDay()].slice(0,1)}</div>`;
+    }).join('');
+    return `<div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:13px;font-weight:500">${h.name}</span>
+        <span style="font-size:11px;color:var(--muted)">${Math.round(pct)}%</span>
+      </div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+      <div class="streak-row">${dots}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── SLEEP ──
+function openSleepModal() { document.getElementById('sDate').value = todayStr(); document.getElementById('sleepModal').classList.add('open'); }
+function closeSleepModal() { document.getElementById('sleepModal').classList.remove('open'); }
+
+function calcHours(sleep, wake) {
+  const [sh,sm] = sleep.split(':').map(Number);
+  const [wh,wm] = wake.split(':').map(Number);
+  let mins = (wh*60+wm) - (sh*60+sm);
+  if (mins < 0) mins += 1440;
+  return +(mins/60).toFixed(2);
+}
+
+function saveSleep() {
+  const date  = document.getElementById('sDate').value.trim();
+  const sleep = document.getElementById('sSleep').value;
+  const wake  = document.getElementById('sWake').value;
+  if (!date || !sleep || !wake) return;
+  const hours = calcHours(sleep, wake);
+  state.sleepLogs = state.sleepLogs.filter(l => l.date !== date);
+  state.sleepLogs.push({ date, sleep, wake, hours });
+  state.sleepLogs.sort((a,b) => b.date.localeCompare(a.date));
+  persist(); closeSleepModal(); renderSleep();
+}
+
+function deleteSleep(date) {
+  state.sleepLogs = state.sleepLogs.filter(l => l.date !== date);
+  persist(); renderSleep();
+}
+
+function sleepStatus(h) {
+  if (h >= 7 && h <= 8.5) return 'hit';
+  if ((h >= 6.5 && h < 7) || (h > 8.5 && h <= 9)) return 'warn';
+  return 'miss';
+}
+function sleepLabel(h) { const s = sleepStatus(h); return s === 'hit' ? 'Goal' : s === 'warn' ? 'Close' : 'Off'; }
+
+function renderSleep() {
+  const last = state.sleepLogs[0];
+  if (last) {
+    const pct = Math.min(last.hours / 8, 1);
+    const circ = 2 * Math.PI * 56;
+    document.getElementById('sleepGaugeFill').setAttribute('stroke-dashoffset', circ - (circ * pct));
+    document.getElementById('lastSleepHrs').textContent = last.hours.toFixed(1);
+    const s = sleepStatus(last.hours);
+    document.getElementById('sleepGaugeFill').setAttribute('stroke', s === 'hit' ? '#6ee7b7' : s === 'warn' ? '#fbbf24' : '#f87171');
+    document.getElementById('lastSleepNote').textContent = `Slept at ${last.sleep} · Woke at ${last.wake} · ${sleepLabel(last.hours)}`;
+  }
+
+  const last7 = getLast7Days();
+  const relevant = state.sleepLogs.filter(l => last7.includes(l.date));
+  if (relevant.length) {
+    const avg = relevant.reduce((s,l) => s+l.hours, 0) / relevant.length;
+    document.getElementById('sleepAvg').textContent = avg.toFixed(1) + 'h';
+    document.getElementById('sleepGoalRate').textContent = relevant.filter(l => sleepStatus(l.hours) === 'hit').length + '/' + relevant.length;
+  } else {
+    document.getElementById('sleepAvg').textContent = '—';
+    document.getElementById('sleepGoalRate').textContent = '—';
+  }
+
+  const chart = document.getElementById('sleepChart');
+  if (relevant.length) {
+    const max = Math.max(...relevant.map(l => l.hours), 8);
+    chart.innerHTML = last7.map(d => {
+      const entry = relevant.find(l => l.date === d);
+      const h = entry ? entry.hours : 0;
+      const pct = h ? (h / max * 100) : 0;
+      const col = !entry ? 'var(--border)' : sleepStatus(h) === 'hit' ? 'var(--accent)' : sleepStatus(h) === 'warn' ? 'var(--warn)' : 'var(--danger)';
+      return `<div class="bar-wrap">
+        <div class="bar" style="height:${pct}%;background:${col}" title="${h ? h.toFixed(1)+'h' : 'No entry'}"></div>
+        <div class="bar-day">${DAYS[new Date(d+'T12:00').getDay()].slice(0,1)}</div>
+      </div>`;
+    }).join('');
+  } else {
+    chart.innerHTML = '<div class="empty" style="margin:auto">No data yet.</div>';
+  }
+
+  const logList = document.getElementById('sleepLogList');
+  if (!state.sleepLogs.length) { logList.innerHTML = '<div class="empty">No entries yet.</div>'; return; }
+  logList.innerHTML = state.sleepLogs.slice(0,14).map(l => {
+    const s = sleepStatus(l.hours);
+    return `<div class="sleep-log-row">
+      <span class="sleep-date">${l.date}</span>
+      <span>${l.sleep} to ${l.wake}</span>
+      <span style="font-family:var(--mono);font-size:13px">${l.hours.toFixed(1)}h</span>
+      <span class="sleep-badge ${s}">${sleepLabel(l.hours)}</span>
+      <button class="remove-btn" onclick="deleteSleep('${l.date}')" title="Delete">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// ── MEALS ──
+const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+const PLAN_DAYS  = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+let ingredientCount = 0;
+let assignTarget = null; // { day, mealType }
+
+function addIngredientRow(name='', qty='', unit='') {
+  ingredientCount++;
+  const id = 'ing_' + ingredientCount;
+  const row = document.createElement('div');
+  row.className = 'ingredient-row'; row.id = id;
+  row.innerHTML = `
+    <input type="text" placeholder="Ingredient" value="${name}" class="ing-name">
+    <input type="number" placeholder="Qty" value="${qty}" min="0" class="ing-qty" style="text-align:center">
+    <input type="text" placeholder="Unit" value="${unit}" class="ing-unit">
+    <button class="remove-btn" onclick="document.getElementById('${id}').remove()" title="Remove">✕</button>`;
+  document.getElementById('ingredientRows').appendChild(row);
+}
+
+function promptNewMeal() { document.getElementById('newMealNameRow').style.display = 'block'; document.getElementById('mealSelect').value = ''; }
+function onMealSelect()  { document.getElementById('newMealNameRow').style.display = 'none'; }
+function getMealName()   { return document.getElementById('mealSelect').value || document.getElementById('newMealName').value.trim(); }
+
+function saveMeal() {
+  const mealName = getMealName();
+  if (!mealName) { alert('Please select or enter a meal name.'); return; }
+  const rows = document.querySelectorAll('#ingredientRows .ingredient-row');
+  const ingredients = [];
+  rows.forEach(r => {
+    const name = r.querySelector('.ing-name').value.trim();
+    const qty  = r.querySelector('.ing-qty').value.trim();
+    const unit = r.querySelector('.ing-unit').value.trim();
+    if (name) ingredients.push({ name, qty, unit });
+  });
+  const desc = document.getElementById('mealDesc').value.trim();
+  const existing = state.meals.find(m => m.name === mealName);
+  if (existing) { existing.desc = desc; existing.ingredients = ingredients; }
+  else state.meals.push({ id: Date.now().toString(), name: mealName, desc, ingredients });
+  persist();
+  document.getElementById('ingredientRows').innerHTML = '';
+  document.getElementById('mealDesc').value = '';
+  document.getElementById('newMealName').value = '';
+  document.getElementById('newMealNameRow').style.display = 'none';
+  renderMeals();
+}
+
+function deleteMeal(id) {
+  if (!confirm('Remove this meal?')) return;
+  const meal = state.meals.find(m => m.id === id);
+  if (meal) {
+    // also remove from week plan
+    Object.keys(state.weekPlan).forEach(k => { if (state.weekPlan[k] === meal.name) delete state.weekPlan[k]; });
+  }
+  state.meals = state.meals.filter(m => m.id !== id);
+  persist(); renderMeals();
+}
+
+function loadMealToForm(id) {
+  const meal = state.meals.find(m => m.id === id); if (!meal) return;
+  document.getElementById('ingredientRows').innerHTML = '';
+  document.getElementById('newMealNameRow').style.display = 'block';
+  document.getElementById('newMealName').value = meal.name;
+  document.getElementById('mealDesc').value = meal.desc || '';
+  meal.ingredients.forEach(i => addIngredientRow(i.name, i.qty, i.unit));
+}
+
+// ── WEEKLY PLAN ──
+function slotKey(day, type) { return day + '-' + type; }
+
+function openAssignModal(day, mealType) {
+  if (!state.meals.length) { alert('Save at least one meal first before assigning to the plan.'); return; }
+  assignTarget = { day, mealType };
+  document.getElementById('assignModalTitle').textContent = day + ' ' + mealType;
+  document.getElementById('mealAssignGrid').innerHTML = state.meals.map(m =>
+    `<button class="meal-option-btn" onclick="assignMeal('${m.name}')">${m.name}</button>`
+  ).join('');
+  document.getElementById('assignModal').classList.add('open');
+}
+
+function closeAssignModal() { document.getElementById('assignModal').classList.remove('open'); assignTarget = null; }
+
+function assignMeal(mealName) {
+  if (!assignTarget) return;
+  const key = slotKey(assignTarget.day, assignTarget.mealType);
+  state.weekPlan[key] = mealName;
+  persist(); closeAssignModal(); renderMeals();
+}
+
+function clearSlot(day, mealType) {
+  delete state.weekPlan[slotKey(day, mealType)];
+  persist(); renderMeals();
+}
+
+function clearGrocery() {
+  if (!confirm('Clear the grocery list? This does not affect your meal plan.')) return;
+  // grocery is now derived, so just clear week plan to reset
+  state.weekPlan = {};
+  persist(); renderMeals();
+}
+
+function buildGroceryFromPlan() {
+  // Collect all unique meals in the plan, gather their ingredients
+  const mealNamesInPlan = [...new Set(Object.values(state.weekPlan))];
+  const list = [];
+  mealNamesInPlan.forEach(mealName => {
+    const meal = state.meals.find(m => m.name === mealName);
+    if (!meal) return;
+    meal.ingredients.forEach(ing => { if (ing.name) list.push({ mealName, ...ing }); });
+  });
+  return list;
+}
+
+function renderWeekPlan() {
+  const grid = document.getElementById('weekPlanGrid');
+  let html = '';
+  // header row
+  html += '<div></div>';
+  PLAN_DAYS.forEach(d => { html += `<div class="week-plan-header">${d}</div>`; });
+  // rows per meal type
+  MEAL_TYPES.forEach(type => {
+    html += `<div class="week-plan-label">${type}</div>`;
+    PLAN_DAYS.forEach(day => {
+      const key = slotKey(day, type);
+      const assigned = state.weekPlan[key];
+      if (assigned) {
+        html += `<div class="meal-slot filled" onclick="openAssignModal('${day}','${type}')">
+          <button class="meal-slot-clear" onclick="event.stopPropagation();clearSlot('${day}','${type}')">✕</button>
+          <div class="meal-slot-name">${assigned}</div>
+        </div>`;
+      } else {
+        html += `<div class="meal-slot" onclick="openAssignModal('${day}','${type}')">
+          <div class="meal-slot-add">+ Add</div>
+        </div>`;
+      }
+    });
+  });
+  grid.innerHTML = html;
+}
+
+function renderMeals() {
+  // Populate meal select dropdown
+  const sel = document.getElementById('mealSelect');
+  const cv = sel.value;
+  sel.innerHTML = '<option value="">— Select existing meal —</option>';
+  state.meals.forEach(m => { const o = document.createElement('option'); o.value = m.name; o.textContent = m.name; sel.appendChild(o); });
+  sel.value = cv;
+
+  // Saved meals list
+  const savedDiv = document.getElementById('savedMealsList');
+  if (!state.meals.length) { savedDiv.innerHTML = '<div class="empty">No meals saved yet.</div>'; }
+  else {
+    savedDiv.innerHTML = state.meals.map(m => `
+      <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span style="font-weight:600;font-size:14px">${m.name}</span>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm" onclick="loadMealToForm('${m.id}')">Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteMeal('${m.id}')">Remove</button>
+          </div>
+        </div>
+        ${m.desc ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${m.desc}</div>` : ''}
+        <div style="font-size:12px;color:var(--muted)">${m.ingredients.map(i => i.name + (i.qty ? ' ('+i.qty+' '+i.unit+')' : '')).join(', ') || 'No ingredients'}</div>
+      </div>`).join('');
+  }
+
+  // Render weekly plan grid
+  renderWeekPlan();
+
+  // Grocery list — derived from plan only
+  const grocery = buildGroceryFromPlan();
+  const grocDiv = document.getElementById('groceryList');
+  if (!grocery.length) {
+    grocDiv.innerHTML = '<div class="empty">Assign meals to your weekly plan to build the grocery list.</div>';
+    return;
+  }
+  const grouped = {};
+  grocery.forEach(g => { if (!grouped[g.mealName]) grouped[g.mealName] = []; grouped[g.mealName].push(g); });
+  grocDiv.innerHTML = Object.entries(grouped).map(([meal, items]) =>
+    `<div style="margin-bottom:12px">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent3);margin-bottom:6px">${meal}</div>
+      ${items.map(i => `<div class="grocery-item"><span>${i.name}</span><span class="grocery-qty">${i.qty ? i.qty+' '+i.unit : ''}</span></div>`).join('')}
+    </div>`).join('');
+}
+
+
+// ── PIN SCREEN ──
+const CORRECT_PIN = '011922';
+const PIN_SESSION_KEY = 'dailyOS_unlocked';
+let pinEntry = '';
+
+function pinPress(val) {
+  if (val === 'del') {
+    pinEntry = pinEntry.slice(0, -1);
+  } else {
+    if (pinEntry.length >= CORRECT_PIN.length) return;
+    pinEntry += val;
+  }
+  updatePinDots();
+  if (pinEntry.length === CORRECT_PIN.length) {
+    setTimeout(checkPin, 120);
+  }
+}
+
+function updatePinDots() {
+  for (let i = 0; i < CORRECT_PIN.length; i++) {
+    const dot = document.getElementById('pd' + i);
+    if (dot) dot.className = 'pin-dot' + (i < pinEntry.length ? ' filled' : '');
+  }
+}
+
+function checkPin() {
+  if (pinEntry === CORRECT_PIN) {
+    sessionStorage.setItem(PIN_SESSION_KEY, '1');
+    document.getElementById('pinScreen').classList.add('hidden');
+    document.getElementById('userScreen').classList.remove('hidden');
+  } else {
+    document.getElementById('pinError').textContent = 'Incorrect PIN. Try again.';
+    for (let i = 0; i < CORRECT_PIN.length; i++) {
+      const dot = document.getElementById('pd' + i);
+      if (dot) dot.className = 'pin-dot error';
+    }
+    setTimeout(() => {
+      pinEntry = '';
+      updatePinDots();
+      document.getElementById('pinError').textContent = '';
+    }, 700);
+  }
+}
+
+function initApp() {
+  document.getElementById('todayBadge').textContent = new Date().toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+  addIngredientRow();
+  const savedUser = sessionStorage.getItem('dailyOS_user');
+  if (sessionStorage.getItem(PIN_SESSION_KEY) === '1' && savedUser && USERS[savedUser]) {
+    // already unlocked and user selected this session
+    document.getElementById('pinScreen').classList.add('hidden');
+    selectUser(savedUser);
+  } else if (sessionStorage.getItem(PIN_SESSION_KEY) === '1') {
+    // unlocked but no user selected yet
+    document.getElementById('pinScreen').classList.add('hidden');
+    document.getElementById('userScreen').classList.remove('hidden');
+  }
+  // else PIN screen stays visible
+}
+
+// ── BOOT ──
+initApp();
+</script>
+</body>
+</html>
