@@ -179,6 +179,32 @@
   .pin-key.del    { font-size: 18px; color: var(--muted); }
   .pin-error-msg  { font-size: 12px; color: var(--danger); font-family: var(--mono); min-height: 18px; text-align: center; }
 
+  /* ── USER PICKER ── */
+  #userScreen {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 998; gap: 28px;
+  }
+  #userScreen.hidden { display: none; }
+  .user-title { font-size: 15px; font-weight: 600; color: var(--muted); letter-spacing: 0.05em; }
+  .user-cards { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+  .user-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 28px 36px; cursor: pointer; text-align: center;
+    transition: border-color 0.2s, transform 0.15s;
+    min-width: 140px;
+  }
+  .user-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .user-avatar { font-size: 36px; margin-bottom: 10px; }
+  .user-name { font-size: 15px; font-weight: 700; color: var(--text); }
+  .user-sub  { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .active-user-badge {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 4px 12px; border-radius: 999px; cursor: pointer;
+  }
+  .active-user-badge:hover { border-color: var(--accent); color: var(--accent); }
+
   .glow-purple { box-shadow: 0 0 0 1px var(--accent2), 0 0 12px rgba(129,140,248,0.2); }
 
   /* ── MEAL PLAN CALENDAR ── */
@@ -327,10 +353,28 @@
   <div class="pin-error-msg" id="pinError"></div>
 </div>
 
+<div id="userScreen" class="hidden">
+  <div class="pin-logo">Daily <span>//</span> OS</div>
+  <div class="user-title">Who is logging in?</div>
+  <div class="user-cards">
+    <div class="user-card" onclick="selectUser('miah')">
+      <div class="user-avatar">👨</div>
+      <div class="user-name">Miah</div>
+      <div class="user-sub">Jeremiah</div>
+    </div>
+    <div class="user-card" onclick="selectUser('carfel')">
+      <div class="user-avatar">👩</div>
+      <div class="user-name">Carfel</div>
+      <div class="user-sub">My wife</div>
+    </div>
+  </div>
+</div>
+
 <header>
   <div class="logo">Daily <span>//</span> OS</div>
   <div class="header-right">
     <div class="save-indicator" id="saveIndicator">Saved</div>
+    <div class="active-user-badge" id="activeUserBadge" onclick="switchUser()" style="display:none"></div>
     <div class="today-badge" id="todayBadge"></div>
   </div>
 </header>
@@ -513,34 +557,64 @@
 
 <script>
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-const STORAGE_KEY = 'miah_daily_os';
 const SB_URL = 'https://anrolvzjalwlteurmrpf.supabase.co';
 const SB_KEY = 'sb_publishable_ZxYI0BkaACUOJM-g-RcmiA_EGQ9_wJ3';
-const SB_ROW = 'main';
 
-// weekPlan: { "Mon-Breakfast": "Meal Name", ... }
+// ── USER MANAGEMENT ──
+let activeUser = null; // 'miah' or 'carfel'
+
+const USERS = {
+  miah:   { name: 'Miah',   emoji: '👨', sbRow: 'miah_data',   localKey: 'dailyOS_miah' },
+  carfel: { name: 'Carfel', emoji: '👩', sbRow: 'carfel_data', localKey: 'dailyOS_carfel' }
+};
+
+function selectUser(userId) {
+  activeUser = userId;
+  sessionStorage.setItem('dailyOS_user', userId);
+  document.getElementById('userScreen').classList.add('hidden');
+  const u = USERS[userId];
+  const badge = document.getElementById('activeUserBadge');
+  badge.textContent = u.emoji + ' ' + u.name;
+  badge.style.display = 'inline-flex';
+  loadFromStorage();
+}
+
+function switchUser() {
+  if (!confirm('Switch user? Your data is saved.')) return;
+  activeUser = null;
+  sessionStorage.removeItem('dailyOS_user');
+  sessionStorage.removeItem('dailyOS_unlocked');
+  location.reload();
+}
+
 let state = { habits: [], habitLogs: {}, sleepLogs: [], meals: [], grocery: [], weekPlan: {} };
+
+function getUser() { return USERS[activeUser]; }
 
 // ── SUPABASE SYNC ──
 async function loadFromStorage() {
   const banner = document.getElementById('storageBanner');
+  const u = getUser();
   try {
     const res = await fetch(
-      `${SB_URL}/rest/v1/daily_os?id=eq.${SB_ROW}&select=data`,
+      `${SB_URL}/rest/v1/daily_os?id=eq.${u.sbRow}&select=data`,
       { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
     );
     const rows = await res.json();
     if (rows && rows.length && rows[0].data) {
       state = rows[0].data;
       if (!state.weekPlan) state.weekPlan = {};
+    } else {
+      state = { habits: [], habitLogs: {}, sleepLogs: [], meals: [], grocery: [], weekPlan: {} };
     }
-    banner.textContent = 'Synced across all your devices.';
+    banner.textContent = u.emoji + ' ' + u.name + ' — synced across all devices.';
     banner.classList.remove('error');
     setTimeout(() => banner.style.display = 'none', 3000);
   } catch(e) {
     try {
-      const local = localStorage.getItem(STORAGE_KEY);
+      const local = localStorage.getItem(u.localKey);
       if (local) { state = JSON.parse(local); if (!state.weekPlan) state.weekPlan = {}; }
+      else state = { habits: [], habitLogs: {}, sleepLogs: [], meals: [], grocery: [], weekPlan: {} };
     } catch(e2) {}
     banner.textContent = 'Offline — using local backup. Will sync when back online.';
     banner.classList.add('error');
@@ -549,9 +623,9 @@ async function loadFromStorage() {
 }
 
 async function persist() {
-  // always save local backup
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
-  // push to Supabase
+  const u = getUser();
+  if (!u) return;
+  try { localStorage.setItem(u.localKey, JSON.stringify(state)); } catch(e) {}
   try {
     await fetch(`${SB_URL}/rest/v1/daily_os`, {
       method: 'POST',
@@ -561,7 +635,7 @@ async function persist() {
         'Content-Type': 'application/json',
         'Prefer': 'resolution=merge-duplicates'
       },
-      body: JSON.stringify({ id: SB_ROW, data: state, updated_at: new Date().toISOString() })
+      body: JSON.stringify({ id: u.sbRow, data: state, updated_at: new Date().toISOString() })
     });
     flashSaved();
   } catch(e) {
@@ -652,15 +726,25 @@ function renderHabits() {
   });
   document.getElementById('statStreak').textContent = longest || '—';
 
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  const yLog = state.habitLogs[yesterdayStr] || {};
+
   document.getElementById('habitList').innerHTML = state.habits.map(h => {
     const s = log[h.id];
+    const y = yLog[h.id];
+    const yBadge = y === 'done'
+      ? `<span style="font-size:10px;color:var(--accent);font-family:var(--mono);margin-left:6px" title="Done yesterday">✓ yday</span>`
+      : y === 'miss'
+      ? `<span style="font-size:10px;color:var(--danger);font-family:var(--mono);margin-left:6px" title="Missed yesterday">✗ yday</span>`
+      : '';
     return `<div class="habit-row">
       <div style="flex:1">
-        <div class="habit-name">${h.name}</div>
+        <div class="habit-name" style="display:flex;align-items:center;gap:4px">${h.name}${yBadge}</div>
         <div class="habit-goal">${h.goal || 'No goal set'}</div>
       </div>
-      <button class="check-btn ${s === 'done' ? 'done' : ''}" onclick="markHabit('${h.id}','done')" title="Done">✓</button>
-      <button class="check-btn ${s === 'miss' ? 'miss' : ''}" onclick="markHabit('${h.id}','miss')" title="Missed">✗</button>
+      <button class="check-btn ${s === 'done' ? 'done' : ''}" onclick="markHabit('${h.id}','done')" title="Done today">✓</button>
+      <button class="check-btn ${s === 'miss' ? 'miss' : ''}" onclick="markHabit('${h.id}','miss')" title="Missed today">✗</button>
       <button class="btn btn-danger btn-sm" onclick="deleteHabit('${h.id}')">Remove</button>
     </div>`;
   }).join('');
@@ -987,7 +1071,7 @@ function checkPin() {
   if (pinEntry === CORRECT_PIN) {
     sessionStorage.setItem(PIN_SESSION_KEY, '1');
     document.getElementById('pinScreen').classList.add('hidden');
-    loadFromStorage();
+    document.getElementById('userScreen').classList.remove('hidden');
   } else {
     document.getElementById('pinError').textContent = 'Incorrect PIN. Try again.';
     for (let i = 0; i < CORRECT_PIN.length; i++) {
@@ -1005,12 +1089,17 @@ function checkPin() {
 function initApp() {
   document.getElementById('todayBadge').textContent = new Date().toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
   addIngredientRow();
-  // check if already unlocked this session
-  if (sessionStorage.getItem(PIN_SESSION_KEY) === '1') {
+  const savedUser = sessionStorage.getItem('dailyOS_user');
+  if (sessionStorage.getItem(PIN_SESSION_KEY) === '1' && savedUser && USERS[savedUser]) {
+    // already unlocked and user selected this session
     document.getElementById('pinScreen').classList.add('hidden');
-    loadFromStorage();
+    selectUser(savedUser);
+  } else if (sessionStorage.getItem(PIN_SESSION_KEY) === '1') {
+    // unlocked but no user selected yet
+    document.getElementById('pinScreen').classList.add('hidden');
+    document.getElementById('userScreen').classList.remove('hidden');
   }
-  // else PIN screen stays visible, user must enter PIN first
+  // else PIN screen stays visible
 }
 
 // ── BOOT ──
